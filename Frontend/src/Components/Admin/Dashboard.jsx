@@ -1,346 +1,569 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
-import {useNavigate} from 'react-router-dom';
- 
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import axios from 'axios';
+import {
+  MDBContainer,
+  MDBRow,
+  MDBCol,
+  MDBCard,
+  MDBCardBody,
+  MDBIcon,
+  MDBTypography,
+  MDBBadge,
+  MDBBtn,
+  MDBInput,
+  MDBSpinner,
+  MDBTable,
+  MDBTableHead,
+  MDBTableBody
+} from 'mdb-react-ui-kit';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+} from 'chart.js';
+import { Line, Bar, Pie } from 'react-chartjs-2';
+import { saveAs } from 'file-saver';
+import { utils, write } from 'xlsx';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
-const AdminTaskAssign = () => {
-  const [users, setUsers] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [formData, setFormData] = useState({
-    assignedTo: "",
-    title: "",
-    description: "",
-    deadline: "",
-    priority: "medium",
-    status: "pending",
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
+
+const AdminDashboard = () => {
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalTasks: 0,
+    pendingTasks: 0,
+    completedTasks: 0
   });
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingTaskId, setEditingTaskId] = useState(null);
-  const [message, setMessage] = useState("");
-
-  const token = localStorage.getItem("AdminToken");
-  console.log("Token : "+token);
-
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    fetchUsers();
-    fetchTasks();
-    // fetchAdminTasks();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-      // const token = localStorage.getItem("adminToken");
-      // console.log(token);
-      const response = await axios.get("http://localhost:5000/api/v1/users", {
-        headers: { "x-access-token": token },
-      });
-
-      // console.log(response);
-
-      if (response.data.success) {
-        setUsers(response.data.data);
-      } else {
-        setMessage("Failed to fetch users");
-      }
-    } catch (err) {
-      console.error("Error fetching users:", err);
-      setMessage("Error fetching users");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState('all');
+  const [selectedUserData, setSelectedUserData] = useState(null);
+  const [userStats, setUserStats] = useState(null);
+  const [chartData, setChartData] = useState({
+    statusData: {
+      labels: [],
+      datasets: []
+    },
+    priorityData: {
+      labels: [],
+      datasets: []
     }
-  };
+  });
 
-//   const fetchAdminTasks = async () => {
+  // Fetch dashboard data
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('AdminToken');
+      const headers = { 'x-access-token': token };
 
-//     const token = localStorage.getItem("adminToken");
-//     const adminId = localStorage.getItem("adminId");
+      // Fetch users
+      const usersResponse = await axios.get('http://localhost:5000/api/v1/users', { headers });
+      const regularUsers = usersResponse.data.data.filter(user => 
+        user.usertype !== 'admin' && user.role !== 'admin'
+      );
+      setUsers(regularUsers);
+
+      // Fetch all tasks
+      const tasksResponse = await axios.get('http://localhost:5000/api/v1/task', { headers });
+      const allTasks = tasksResponse.data.data;
+      setTasks(allTasks);
+
+      // Update overall stats
+      const overallStats = {
+        totalUsers: regularUsers.length,
+        totalTasks: allTasks.length,
+        pendingTasks: allTasks.filter(task => task.status === 'pending').length,
+        completedTasks: allTasks.filter(task => task.status === 'completed').length
+      };
+      setStats(overallStats);
+
+      // If a user is selected, update their stats
+      if (selectedUser !== 'all') {
+        const userTasks = allTasks.filter(task => task.assignedTo === selectedUser);
+        updateUserStats(userTasks, selectedUser, regularUsers);
+      }
+
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedUser]);
+
+  // Function to update user-specific stats
+  const updateUserStats = (userTasks, userId, usersList) => {
+    const userData = usersList.find(user => user._id === userId);
+    if (!userData) return;
+
+    const totalTasks = userTasks.length;
+    const completedTasks = userTasks.filter(task => task.status === 'completed');
+    const pendingTasks = userTasks.filter(task => task.status === 'pending');
     
-//     // console.log(token);
-//     // console.log(adminId);
+    const priorityCounts = {
+      high: userTasks.filter(task => task.priority === 'high').length,
+      medium: userTasks.filter(task => task.priority === 'medium').length,
+      low: userTasks.filter(task => task.priority === 'low').length
+    };
 
-//     if (!adminId) {
-//         console.log("No admin logged in");
-//         return;
-//     }
-
-//     try {
-//       // console.log(`Requesting: http://localhost:5000/api/v1/task/admin-tasks?adminId=${adminId}`);
-
-//       const response = await fetch(`http://localhost:5000/api/v1/task/admin-tasks?adminId=${adminId}`, {
-//         method: "GET",
-//         headers: {
-//           "Content-Type": "application/json",
-//           "x-access-token": localStorage.getItem("adminToken"), // Send authentication token
-//         },
-//       });
-//         const data = await response.json();
-
-//         console.log(data);
-        
-//         if (data.success) {
-//             console.log("Tasks:", data.tasks);
-//         } else {
-//             console.error("Error fetching tasks:", data.message);
-//         }
-//     } catch (error) {
-//         console.error("Error:", error);
-//     }
-// };
-
-
-  const fetchTasks = async () => {
-    try {
-      const token = localStorage.getItem("AdminToken");
-      // console.log(token);
-      const response = await axios.get("http://localhost:5000/api/v1/task", {
-        headers: { "x-access-token": token },
-      });
-
-      if (response.data.success) {
-        setTasks(response.data.data);
-      } else {
-        setMessage("Failed to fetch tasks");
+    setSelectedUserData({
+      username: userData.username,
+      totalTasks,
+      completedTasks: completedTasks.length,
+      pendingTasks: pendingTasks.length,
+      priorities: priorityCounts,
+      percentages: {
+        high: totalTasks ? ((priorityCounts.high / totalTasks) * 100).toFixed(1) : 0,
+        medium: totalTasks ? ((priorityCounts.medium / totalTasks) * 100).toFixed(1) : 0,
+        low: totalTasks ? ((priorityCounts.low / totalTasks) * 100).toFixed(1) : 0
       }
-    } catch (err) {
-      console.error("Error fetching tasks:", err);
-      setMessage("Error fetching tasks");
+    });
+
+    // Update charts for the selected user
+    setChartData({
+      statusData: {
+        labels: ['Completed', 'Pending'],
+        datasets: [{
+          data: [completedTasks.length, pendingTasks.length],
+          backgroundColor: ['#00b74a', '#ffa900'],
+          label: `${userData.username}'s Tasks`
+        }]
+      },
+      priorityData: {
+        labels: ['High', 'Medium', 'Low'],
+        datasets: [{
+          label: `${userData.username}'s Tasks by Priority`,
+          data: [priorityCounts.high, priorityCounts.medium, priorityCounts.low],
+          backgroundColor: ['#f93154', '#ffa900', '#39c0ed'],
+          borderColor: ['#f93154', '#ffa900', '#39c0ed'],
+          borderWidth: 1
+        }]
+      }
+    });
+  };
+
+  // Handle user selection change
+  const handleUserChange = (e) => {
+    const userId = e.target.value;
+    setSelectedUser(userId);
+    
+    if (userId === 'all') {
+      setSelectedUserData(null);
+      // Reset charts to show overall data
+      const overallStatusData = {
+        labels: ['Completed', 'Pending'],
+        datasets: [{
+          data: [stats.completedTasks, stats.pendingTasks],
+          backgroundColor: ['#00b74a', '#ffa900'],
+          label: 'All Tasks'
+        }]
+      };
+
+      const allPriorityCounts = {
+        high: tasks.filter(task => task.priority === 'high').length,
+        medium: tasks.filter(task => task.priority === 'medium').length,
+        low: tasks.filter(task => task.priority === 'low').length
+      };
+
+      setChartData({
+        statusData: overallStatusData,
+        priorityData: {
+          labels: ['High', 'Medium', 'Low'],
+          datasets: [{
+            label: 'All Tasks by Priority',
+            data: [allPriorityCounts.high, allPriorityCounts.medium, allPriorityCounts.low],
+            backgroundColor: ['#f93154', '#ffa900', '#39c0ed'],
+            borderColor: ['#f93154', '#ffa900', '#39c0ed'],
+            borderWidth: 1
+          }]
+        }
+      });
+    } else {
+      const userTasks = tasks.filter(task => task.assignedTo === userId);
+      updateUserStats(userTasks, userId, users);
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!formData.assignedTo || !formData.title || !formData.description || !formData.deadline) {
-      setMessage("All fields are required!");
+  // Update user stats when selected user changes
+  useEffect(() => {
+    if (selectedUser === 'all') {
+      setUserStats(null);
       return;
     }
 
-    try {
-      const token = localStorage.getItem("AdminToken");
-      const response = isEditing
-        ? await axios.put(
-            `http://localhost:5000/api/v1/task/${editingTaskId}`,
-            formData,
-            {
-              headers: {
-                "x-access-token": token,
-                "Content-Type": "application/json",
-              },
-            }
-          )
-        : await axios.post(
-            `http://localhost:5000/api/v1/task/create/${formData.assignedTo}`,
-            {
-              title: formData.title,
-              description: formData.description,
-              deadline: formData.deadline,
-              priority: formData.priority,
-              status: formData.status,
-            },
-            {
-              headers: {
-                "x-access-token": token,
-                "Content-Type": "application/json",
-              },
-            }
-          );
+    const userTasks = tasks.filter(task => task.assignedTo === selectedUser);
+      const completedTasks = userTasks.filter(task => task.status === 'completed');
+      const pendingTasks = userTasks.filter(task => task.status === 'pending');
+    
+    const selectedUserData = users.find(user => user._id === selectedUser);
 
-          // console.log(response);
-
-      if (response.data.success) {
-        setMessage(isEditing ? "Task updated successfully!" : "Task assigned successfully!");
-        fetchTasks();
-        resetForm();
-      } else {
-        setMessage("Failed to save task");
-      }
-    } catch (error) {
-      console.error("Error saving task:", error);
-      setMessage("Failed to save task");
-    }
-  };
-
-  const handleEditClick = (task) => {
-    setFormData({
-      assignedTo: task.assignedTo._id,
-      title: task.title,
-      description: task.description,
-      deadline: task.deadline.split("T")[0], // Format date for input
-      priority: task.priority,
-      status: task.status,
+    // Calculate completion times for completed tasks
+    const completionTimes = completedTasks.map(task => {
+      const startDate = new Date(task.createdAt);
+      const endDate = new Date(task.updatedAt);
+      return endDate - startDate;
     });
-    setIsEditing(true);
-    setEditingTaskId(task._id);
-  };
+      
+    // Calculate average completion time
+    const avgCompletionTime = completionTimes.length > 0
+      ? completionTimes.reduce((acc, time) => acc + time, 0) / completionTimes.length
+      : 0;
 
-  const handleLogout = async () => {
-    try {
-        const response = await fetch('http://localhost:5000/api/v1/users/logout', {
-            method: 'POST',
-            headers: {
-                'x-access-token': localStorage.getItem('AdminToken'),
-                'Content-Type': 'application/json'
-            }
-        });
+    // Calculate on-time completions
+      const onTimeCompletions = completedTasks.filter(task => {
+        const completionDate = new Date(task.updatedAt);
+        const deadlineDate = new Date(task.deadline);
+        return completionDate <= deadlineDate;
+      });
 
-        if (response.ok) {
-            localStorage.removeItem('AdminToken'); // Remove token from storage
-            navigate('/'); // Redirect to login page
-        } else {
-            console.error("Logout failed");
-        }
-    } catch (error) {
-        console.error("Error logging out:", error);
-    }
-};
-
-
-  const updateTaskStatus = async (taskId, newStatus) => {
-    try {
-      const token = localStorage.getItem("AdminToken");
-      const response = await axios.put(
-        `http://localhost:5000/api/v1/task/status/${taskId}`,
-        { status: newStatus },
-        {
-          headers: {
-            "x-access-token": token,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.data.success) {
-        setMessage("Task status updated successfully!");
-        fetchTasks();
-      } else {
-        setMessage("Failed to update task status");
-      }
-    } catch (error) {
-      console.error("Error updating task status:", error);
-      setMessage("Error updating task status");
-    }
-  };
-
-  const deleteTask = async (taskId) => {
-    try {
-      const token = localStorage.getItem("AdminToken");
-      const response = await axios.delete(
-        `http://localhost:5000/api/v1/task/delete/${taskId}`,
-        {
-          headers: {
-            "x-access-token": token,
-          },
-        }
-      );
-
-      if (response.data.success) {
-        setMessage("Task deleted successfully!");
-        fetchTasks();
-      } else {
-        setMessage("Failed to delete task");
-      }
-    } catch (error) {
-      console.error("Error deleting task:", error);
-      setMessage("Error deleting task");
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      assignedTo: "",
-      title: "",
-      description: "",
-      deadline: "",
-      priority: "medium",
-      status: "pending",
+    setUserStats({
+      username: selectedUserData?.username || 'Unknown User',
+      totalTasks: userTasks.length,
+      completedTasks: completedTasks.length,
+      pendingTasks: pendingTasks.length,
+      highPriorityTasks: userTasks.filter(task => task.priority === 'high').length,
+      mediumPriorityTasks: userTasks.filter(task => task.priority === 'medium').length,
+      lowPriorityTasks: userTasks.filter(task => task.priority === 'low').length,
+          completionRate: userTasks.length ? (completedTasks.length / userTasks.length) * 100 : 0,
+          onTimeCompletionRate: completedTasks.length ? (onTimeCompletions.length / completedTasks.length) * 100 : 0,
+      avgCompletionTime: avgCompletionTime
     });
-    setIsEditing(false);
-    setEditingTaskId(null);
-  };
+  }, [selectedUser, tasks, users]);
+
+  // Update chart data when user or tasks change
+  useEffect(() => {
+    const relevantTasks = selectedUser === 'all' 
+      ? tasks 
+      : tasks.filter(task => task.assignedTo === selectedUser);
+
+    const selectedUserName = selectedUser === 'all' 
+      ? 'All Users' 
+      : users.find(user => user._id === selectedUser)?.username || 'Selected User';
+
+    const statusCounts = {
+      completed: relevantTasks.filter(task => task.status === 'completed').length,
+      pending: relevantTasks.filter(task => task.status === 'pending').length
+    };
+
+    const priorityCounts = {
+      high: relevantTasks.filter(task => task.priority === 'high').length,
+      medium: relevantTasks.filter(task => task.priority === 'medium').length,
+      low: relevantTasks.filter(task => task.priority === 'low').length
+    };
+
+    setChartData({
+      statusData: {
+        labels: ['Completed', 'Pending'],
+        datasets: [{
+          data: [statusCounts.completed, statusCounts.pending],
+          backgroundColor: ['#00b74a', '#ffa900'],
+          label: `${selectedUserName}'s Tasks`
+        }]
+      },
+      priorityData: {
+        labels: ['High', 'Medium', 'Low'],
+        datasets: [{
+          label: `${selectedUserName}'s Tasks by Priority`,
+          data: [priorityCounts.high, priorityCounts.medium, priorityCounts.low],
+          backgroundColor: ['#f93154', '#ffa900', '#39c0ed'],
+          borderColor: ['#f93154', '#ffa900', '#39c0ed'],
+          borderWidth: 1
+        }]
+      }
+    });
+  }, [selectedUser, tasks, users]);
+
+  // Update data when user selection changes
+  useEffect(() => {
+    if (selectedUser === 'all') {
+      setSelectedUserData(null);
+      return;
+    }
+
+    const userTasks = tasks.filter(task => task.assignedTo === selectedUser);
+    const userData = users.find(user => user._id === selectedUser);
+
+    if (userData) {
+      const totalTasks = userTasks.length;
+      const priorityCounts = {
+        high: userTasks.filter(task => task.priority === 'high').length,
+        medium: userTasks.filter(task => task.priority === 'medium').length,
+        low: userTasks.filter(task => task.priority === 'low').length
+      };
+
+      setSelectedUserData({
+        username: userData.username,
+        totalTasks,
+        priorities: priorityCounts,
+        percentages: {
+          high: totalTasks ? ((priorityCounts.high / totalTasks) * 100).toFixed(1) : 0,
+          medium: totalTasks ? ((priorityCounts.medium / totalTasks) * 100).toFixed(1) : 0,
+          low: totalTasks ? ((priorityCounts.low / totalTasks) * 100).toFixed(1) : 0
+        }
+      });
+    }
+  }, [selectedUser, tasks, users]);
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  if (loading) {
+    return (
+    <MDBContainer className="py-5 text-center">
+      <MDBSpinner role='status'>
+          <span className='visually-hidden'>Loading...</span>
+      </MDBSpinner>
+    </MDBContainer>
+  );
+  }
 
   return (
-    <div className="container mt-4">
-      <h2 className="mb-3">{isEditing ? "Edit Task" : "Assign Task"}</h2>
-      {message && <div className="alert alert-info">{message}</div>}
-      <form onSubmit={handleSubmit} className="card p-3 shadow-sm">
-        <div className="mb-3">
-          <label className="form-label">Assign To</label>
-          <select className="form-select" name="assignedTo" value={formData.assignedTo} onChange={handleChange} required>
-            <option value="">Select User</option>
-            {users.length > 0 ? (
-              users.map((user) => (
-                <option key={user._id} value={user._id}>
-                  {user.username} ({user.email})
-                </option>
-              ))
-            ) : (
-              <option disabled>Loading users...</option>
-            )}
-          </select>
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Task Title</label>
-          <input type="text" className="form-control" name="title" placeholder="Task Title" value={formData.title} onChange={handleChange} required />
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Task Description</label>
-          <textarea className="form-control" name="description" placeholder="Task Description" value={formData.description} onChange={handleChange} required />
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Deadline</label>
-          <input type="date" className="form-control" name="deadline" value={formData.deadline} onChange={handleChange} required />
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Priority</label>
-          <select className="form-select" name="priority" value={formData.priority} onChange={handleChange} required>
-            <option value="low">Low Priority</option>
-            <option value="medium">Medium Priority</option>
-            <option value="high">High Priority</option>
-          </select>
-        </div>
-
-        <button type="submit" className="btn btn-primary me-2">{isEditing ? "Update Task" : "Assign Task"}</button>
-        {isEditing && <button type="button" className="btn btn-secondary" onClick={resetForm}>Cancel</button>}
-      </form>
-
-      {tasks.length > 0 && (
-        <div className="mt-4">
-          <h3>Assigned Tasks</h3>
-          <div className="row">
-            {tasks.map((task) => (
-              <div key={task._id} className="col-md-4">
-                <div className="card shadow-sm mb-3">
-                  <div className="card-body">
-                    <h5 className="card-title">{task.title}</h5>
-                    <p className="card-text"><strong>Assigned To:</strong> {task.assignedTo.username}</p>
-                    <p className="card-text"><strong>Deadline:</strong> {new Date(task.deadline).toLocaleDateString()}</p>
-                    <p className="card-text"><strong>Priority:</strong> <span className={`badge bg-${task.priority === 'high' ? 'danger' : task.priority === 'medium' ? 'warning' : 'success'}`}>{task.priority}</span></p>
-                    <p className="card-text"><strong>Status:</strong> {task.status}</p>
-                    <div className="d-flex justify-content-between">
-                      <button className="btn btn-outline-primary btn-sm" onClick={() => handleEditClick(task)}>Edit</button>
-                      <button className="btn btn-success btn-sm" onClick={() => updateTaskStatus(task._id, "completed")}>Mark as Completed</button>
-                      <button className="btn btn-danger btn-sm" onClick={() => deleteTask(task._id)}>Delete Task</button>
-                    </div>
-                  </div>
+    <MDBContainer fluid className="py-5">
+      {/* Stats Cards - Show overall stats when no user selected, user stats when selected */}
+      <MDBRow className="g-4 mb-4">
+        <MDBCol xl="3" sm="6">
+          <MDBCard className="h-100">
+            <MDBCardBody>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <MDBTypography tag='h6' className="fs-6 text-muted mb-2">
+                    {selectedUser === 'all' ? 'Total Users' : 'Total Tasks'}
+                  </MDBTypography>
+                  <MDBTypography tag='h3' className="mb-0">
+                    {selectedUser === 'all' ? stats.totalUsers : userStats?.totalTasks || 0}
+                  </MDBTypography>
                 </div>
+                <MDBIcon 
+                  fas 
+                  icon={selectedUser === 'all' ? 'users' : 'tasks'} 
+                  size="2x" 
+                  className="text-primary" 
+                />
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      <button className="btn btn-danger mt-3" onClick={handleLogout}>Logout</button>
-    </div>
-  );
+            </MDBCardBody>
+          </MDBCard>
+        </MDBCol>
 
+        <MDBCol xl="3" sm="6">
+          <MDBCard className="h-100">
+            <MDBCardBody>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <MDBTypography tag='h6' className="fs-6 text-muted mb-2">Total Tasks</MDBTypography>
+                  <MDBTypography tag='h3' className="mb-0">
+                    {selectedUser === 'all' ? stats.totalTasks : userStats?.totalTasks || 0}
+                  </MDBTypography>
+                </div>
+                <MDBIcon fas icon="tasks" size="2x" className="text-info" />
+              </div>
+            </MDBCardBody>
+          </MDBCard>
+        </MDBCol>
+
+        <MDBCol xl="3" sm="6">
+          <MDBCard className="h-100">
+            <MDBCardBody>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <MDBTypography tag='h6' className="fs-6 text-muted mb-2">Pending Tasks</MDBTypography>
+                  <MDBTypography tag='h3' className="mb-0">
+                    {selectedUser === 'all' ? stats.pendingTasks : userStats?.pendingTasks || 0}
+                  </MDBTypography>
+                </div>
+                <MDBIcon fas icon="clock" size="2x" className="text-warning" />
+              </div>
+            </MDBCardBody>
+          </MDBCard>
+        </MDBCol>
+
+        <MDBCol xl="3" sm="6">
+          <MDBCard className="h-100">
+            <MDBCardBody>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <MDBTypography tag='h6' className="fs-6 text-muted mb-2">Completed Tasks</MDBTypography>
+                  <MDBTypography tag='h3' className="mb-0">
+                    {selectedUser === 'all' ? stats.completedTasks : userStats?.completedTasks || 0}
+                  </MDBTypography>
+                </div>
+                <MDBIcon fas icon="check-circle" size="2x" className="text-success" />
+              </div>
+            </MDBCardBody>
+          </MDBCard>
+        </MDBCol>
+      </MDBRow>
+
+      {/* User Selection Dropdown */}
+      <MDBRow className="mb-4">
+        <MDBCol>
+          <MDBCard>
+            <MDBCardBody>
+              <div className="d-flex align-items-center">
+                <MDBIcon fas icon="user" className="me-2" />
+                <h5 className="mb-0 me-3">Select User:</h5>
+                <select 
+                  className="form-select w-auto"
+                  value={selectedUser}
+                  onChange={handleUserChange}
+                >
+                  <option value="all">All Users</option>
+                  {users.map(user => (
+                    <option key={user._id} value={user._id}>
+                      {user.username}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </MDBCardBody>
+          </MDBCard>
+        </MDBCol>
+      </MDBRow>
+ 
+      {/* Charts Section */}
+      <MDBRow className="g-4 mb-4">
+        <MDBCol md="6">
+          <MDBCard>
+            <MDBCardBody>
+              <h5 className="mb-4 text-center">
+                {selectedUserData ? `${selectedUserData.username}'s Task Status` : 'Overall Task Status'}
+              </h5>
+              <div style={{ height: '300px' }}>
+                <Pie 
+                  data={chartData.statusData} 
+                  options={{ 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'bottom'
+                      }
+                    }
+                  }} 
+                />
+              </div>
+            </MDBCardBody>
+          </MDBCard>
+        </MDBCol>
+
+        <MDBCol md="6">
+          <MDBCard>
+            <MDBCardBody>
+              <h5 className="mb-4 text-center">
+                {selectedUserData ? `${selectedUserData.username}'s Task Priorities` : 'Overall Task Priorities'}
+              </h5>
+              <div style={{ height: '300px' }}>
+              <Bar 
+                data={chartData.priorityData}
+                options={{
+                  responsive: true,
+                    maintainAspectRatio: false,
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                        ticks: {
+                          stepSize: 1
+                        }
+                      }
+                    },
+                    plugins: {
+                      legend: {
+                        display: false
+                    }
+                  }
+                }}
+              />
+              </div>
+            </MDBCardBody>
+          </MDBCard>
+        </MDBCol>
+      </MDBRow>
+
+      {/* Task Priority Breakdown Table - Only shown when a user is selected */}
+      {selectedUserData && (
+        <MDBRow>
+          <MDBCol>
+            <MDBCard>
+              <MDBCardBody>
+                <h5 className="mb-4 text-center">Task Priority Breakdown for {selectedUserData.username}</h5>
+                <MDBTable align='middle' hover>
+                  <MDBTableHead>
+                    <tr>
+                      <th scope='col'>Priority Level</th>
+                      <th scope='col' className="text-center">Number of Tasks</th>
+                      <th scope='col' className="text-center">Percentage</th>
+                    </tr>
+                  </MDBTableHead>
+                  <MDBTableBody>
+                    <tr>
+                      <td>
+                        <div className="d-flex align-items-center">
+                          <MDBBadge color='danger' className="me-2">High</MDBBadge>
+                          High Priority
+                        </div>
+                      </td>
+                      <td className="text-center">{selectedUserData.priorities.high}</td>
+                      <td className="text-center">{selectedUserData.percentages.high}%</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div className="d-flex align-items-center">
+                          <MDBBadge color='warning' className="me-2">Medium</MDBBadge>
+                          Medium Priority
+                        </div>
+                      </td>
+                      <td className="text-center">{selectedUserData.priorities.medium}</td>
+                      <td className="text-center">{selectedUserData.percentages.medium}%</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div className="d-flex align-items-center">
+                          <MDBBadge color='info' className="me-2">Low</MDBBadge>
+                          Low Priority
+                        </div>
+                      </td>
+                      <td className="text-center">{selectedUserData.priorities.low}</td>
+                      <td className="text-center">{selectedUserData.percentages.low}%</td>
+                    </tr>
+                    <tr className="fw-bold bg-light">
+                      <td>Total</td>
+                      <td className="text-center">{selectedUserData.totalTasks}</td>
+                      <td className="text-center">100%</td>
+                    </tr>
+                  </MDBTableBody>
+                </MDBTable>
+              </MDBCardBody>
+            </MDBCard>
+          </MDBCol>
+        </MDBRow>
+      )}
+    </MDBContainer>
+  );
 };
 
-export default AdminTaskAssign;
+export default AdminDashboard;

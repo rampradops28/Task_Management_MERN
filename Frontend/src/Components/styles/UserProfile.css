@@ -1,0 +1,259 @@
+.admin-profile-container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.profile-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2rem;
+  min-height: calc(100vh - 100px);
+}
+
+.profile-sidebar {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+  height: fit-content;
+}
+
+.profile-main {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+}
+
+.profile-image {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  margin: 0 auto 1.5rem;
+  display: block;
+  object-fit: cover;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.profile-info {
+  text-align: center;
+}
+
+.profile-name {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #2d3748;
+}
+
+.profile-role {
+  font-size: 1rem;
+  color: #718096;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.profile-email {
+  font-size: 0.9rem;
+  color: #4a5568;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.form-section {
+  margin-top: 2rem;
+}
+
+.form-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #2d3748;
+}
+
+.form-outline {
+  position: relative;
+  background: #ffffff;
+  border-radius: 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-outline:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.form-outline input {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #2d3748;
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+.form-outline input:hover {
+  border-color: #90cdf4;
+  background-color: #f7fafc !important;
+}
+
+.form-outline input:focus {
+  border-color: #2c5282;
+  box-shadow: 0 0 0 3px rgba(44, 82, 130, 0.2);
+  outline: none;
+  background-color: #ffffff !important;
+}
+
+.password-requirements {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f7fafc;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #4a5568;
+}
+
+.password-requirements ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5rem 0 0;
+}
+
+.password-requirements li {
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+}
+
+.password-requirements li::before {
+  content: "•";
+  color: #4299e1;
+  font-weight: bold;
+  margin-right: 0.5rem;
+}
+
+.submit-button {
+  width: 100%;
+  padding: 0.75rem;
+  background: #4299e1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.submit-button:hover {
+  background: #2b6cb0;
+}
+
+.alert {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.alert-success {
+  background-color: #c6f6d5;
+  color: #2f855a;
+}
+
+.alert-danger {
+  background-color: #fed7d7;
+  color: #c53030;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .profile-sidebar,
+  .profile-main {
+    background: #2d3748;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.2);
+  }
+
+  .profile-name {
+    color: #e2e8f0;
+  }
+
+  .profile-role {
+    color: #a0aec0;
+  }
+
+  .profile-email {
+    color: #cbd5e0;
+  }
+
+  .form-title {
+    color: #e2e8f0;
+  }
+
+  .form-outline {
+    background: #2d3748;
+  }
+
+  .form-outline:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  .form-outline input {
+    color: #e2e8f0;
+    background-color: #2d3748 !important;
+    border-color: #4a5568;
+  }
+
+  .form-outline input:hover {
+    border-color: #90cdf4;
+    background-color: #2a374a !important;
+  }
+
+  .form-outline input:focus {
+    border-color: #90cdf4;
+    box-shadow: 0 0 0 3px rgba(144, 205, 244, 0.2);
+    background-color: #2d3748 !important;
+  }
+
+  .password-requirements {
+    background: #2a374a;
+    color: #cbd5e0;
+  }
+
+  .text-muted {
+    color: #a0aec0 !important;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .profile-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-profile-container {
+    padding: 1rem;
+  }
+
+  .profile-sidebar,
+  .profile-main {
+    padding: 1.5rem;
+  }
+} 

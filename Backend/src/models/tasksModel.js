@@ -30,6 +30,18 @@ const taskSchema = new mongoose.Schema({
         type: String,
         enum: ["low", "medium", "high"],
         default: "medium"
+    },
+    version: {
+        type: Number,
+        default: 0
+    },
+    lastUpdatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    },
+    lastUpdateTimestamp: {
+        type: Date,
+        default: Date.now
     }
 }, { timestamps: true });
 

@@ -3,7 +3,6 @@ import { userRepository } from "../repository/userRepository.js";
 
 export const createTaskService = async function (taskData) {
     try {
-
         // Validate the assigned user exists
         const user = await userRepository.getUserById(taskData.assignedTo);
         if (!user) {
@@ -23,16 +22,63 @@ export const createTaskService = async function (taskData) {
     }
 };
 
-export const updateTaskService = async function (taskId, statusToUpdate) {
+export const updateTaskService = async function (taskId, updateData, userId) {
     try {
-        const isTaskValid = await taskRepository.getTaskById(taskId);
-        if(!isTaskValid) {
-            throw new Error("Task Not Found")
+        console.log('updateTaskService called with:', { taskId, updateData, userId });
+
+        const task = await taskRepository.getTaskById(taskId);
+        if (!task) {
+            console.log('Task not found in service');
+            throw new Error("Task Not Found");
+        }
+
+        // Validate the status value
+        const validStatuses = ["pending", "in-progress", "completed"];
+        if (!validStatuses.includes(updateData.status)) {
+            console.log('Invalid status value:', updateData.status);
+            throw new Error("Invalid status value");
+        }
+
+        // Validate status transition
+        const currentStatus = task.status;
+        const newStatus = updateData.status;
+        
+        const validTransitions = {
+            'pending': ['in-progress'],
+            'in-progress': ['completed'],
+            'completed': []
         };
-        const updatedTask = await taskRepository.update(taskId, statusToUpdate);
-        return updatedTask;
+
+        if (!validTransitions[currentStatus].includes(newStatus)) {
+            console.log('Invalid status transition:', { from: currentStatus, to: newStatus });
+            throw new Error(`Cannot change status from ${currentStatus} to ${newStatus}`);
+        }
+
+        try {
+            const updatedTask = await taskRepository.update(
+                taskId,
+                { status: updateData.status },
+                userId,
+                updateData.version
+            );
+            console.log('Task updated successfully in service:', updatedTask);
+            return updatedTask;
+        } catch (error) {
+            if (error.message === "CONCURRENT_UPDATE") {
+                // Get the latest task state for the error message
+                const latestTask = await taskRepository.getTaskById(taskId);
+                throw {
+                    code: "CONCURRENT_UPDATE",
+                    message: "Task was updated by another user",
+                    currentStatus: latestTask.status,
+                    lastUpdatedBy: latestTask.lastUpdatedBy,
+                    lastUpdateTimestamp: latestTask.lastUpdateTimestamp
+                };
+            }
+            throw error;
+        }
     } catch (error) {
-        console.log("Create Task service error", error);
+        console.log("Update Task service error:", error);
         throw error;
     }
 };

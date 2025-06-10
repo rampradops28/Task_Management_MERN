@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 import {
   MDBBtn,
   MDBContainer,
@@ -15,9 +16,9 @@ import {
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "mdb-react-ui-kit/dist/css/mdb.min.css";
+import "../styles/Auth.css";
 
-
-const UserLogin = () => {
+const AdminLogin = () => {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -25,6 +26,7 @@ const UserLogin = () => {
   const [message, setMessage] = useState({ type: "", text: "" });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { dispatch } = useContext(AuthContext);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -39,44 +41,123 @@ const UserLogin = () => {
     setLoading(true);
     try {
       const response = await axios.post("http://localhost:5000/api/v1/users/login", formData);
-      localStorage.setItem("AdminId", response.data.data.user._id);
-      localStorage.setItem("AdminToken", response.data.data.token);
-      setMessage({ type: "success", text: "Login Successful. Redirecting..." });
-      setTimeout(() => navigate("/admin-dashboard"), 1000);
+
+      if (response.data.success) {
+        const { token, user } = response.data.data;
+        
+        if (user.usertype !== 'admin') {
+          throw new Error('Not authorized as admin');
+        }
+
+        localStorage.setItem("AdminToken", token);
+        localStorage.setItem("userId", user._id);
+        localStorage.setItem("userEmail", user.email);
+        localStorage.setItem("userType", 'admin');
+        
+        dispatch({ 
+          type: 'LOGIN', 
+          payload: { 
+            id: user._id,
+            email: user.email,
+            role: 'admin',
+            usertype: 'admin',
+            token: token
+          }
+        });
+
+        setMessage({ type: "success", text: "Login Successful. Redirecting..." });
+        navigate("/admin-dashboard");
+      } else {
+        throw new Error(response.data.message || 'Login failed');
+      }
     } catch (error) {
-      setMessage({ type: "error", text: error.response?.data?.message || "Login failed" });
+      console.error('Login error:', error);
+      let errorMessage = "Invalid admin credentials";
+      
+      if (error.message === 'Not authorized as admin') {
+        errorMessage = "This account does not have admin privileges";
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      setMessage({ 
+        type: "error", 
+        text: errorMessage
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <MDBContainer fluid>
-      <MDBCard className="text-black m-5" style={{ borderRadius: "25px" }}>
+    <MDBContainer fluid className="auth-container">
+      <MDBCard className="auth-card">
         <MDBCardBody>
           <MDBRow>
-            <MDBCol md="10" lg="6" className="order-2 order-lg-1 d-flex flex-column align-items-center">
-              <h1 className="text-center fw-bold mb-5 mt-4">Admin Login</h1>
+            <MDBCol md="10" lg="6" className="order-2 order-lg-1 auth-form-section">
+              <h1 className="auth-title">Admin Login</h1>
+              
               {message.text && (
-                <p className={message.type === "error" ? "text-danger" : "text-success"}>{message.text}</p>
+                <div className={`auth-message ${message.type}`}>
+                  {message.text}
+                </div>
               )}
-              <div className="d-flex flex-row align-items-center mb-4">
-                <MDBIcon fas icon="envelope me-3" size="lg" />
-                <MDBInput label="User Email" id="form2" type="email" name="email" value={formData.email} onChange={handleChange} />
-              </div>
-              <div className="d-flex flex-row align-items-center mb-4">
-                <MDBIcon fas icon="lock me-3" size="lg" />
-                <MDBInput label="Password" id="form3" type="password" name="password" value={formData.password} onChange={handleChange} />
-              </div>
-              <MDBBtn className="mb-4" size="lg" onClick={handleSubmit} disabled={loading}>
-                {loading ? "Logging in..." : "Login"}
-              </MDBBtn>
-              <p className="login-link">
-                Don't have an account? <Link to="/admin">Sign Up Here</Link>
-              </p>
+
+              <form onSubmit={handleSubmit}>
+                <div className="auth-input-group">
+                  <MDBIcon fas icon="envelope" className="input-icon position-absolute" style={{ left: '1rem', top: '1.1rem' }} />
+                  <MDBInput
+                    label="Admin Email"
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="auth-input"
+                    required
+                  />
+                </div>
+
+                <div className="auth-input-group">
+                  <MDBIcon fas icon="lock" className="input-icon position-absolute" style={{ left: '1rem', top: '1.1rem' }} />
+                  <MDBInput
+                    label="Password"
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="auth-input"
+                    required
+                  />
+                </div>
+
+                <MDBBtn 
+                  type="submit"
+                  disabled={loading}
+                  className="auth-submit-btn"
+                >
+                  {loading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Logging in...
+                    </>
+                  ) : (
+                    'Login'
+                  )}
+                </MDBBtn>
+
+                <p className="auth-link">
+                  Don't have an admin account? <Link to="/register-admin">Sign Up Here</Link>
+                </p>
+              </form>
             </MDBCol>
-            <MDBCol md="10" lg="6" className="order-1 order-lg-2 d-flex align-items-center">
-              <MDBCardImage src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-registration/draw1.webp" fluid />
+
+            <MDBCol md="10" lg="6" className="order-1 order-lg-2 auth-image-section">
+              <MDBCardImage 
+                src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-registration/draw1.webp"
+                fluid
+                className="auth-image"
+                alt="Admin Login"
+              />
             </MDBCol>
           </MDBRow>
         </MDBCardBody>
@@ -85,4 +166,4 @@ const UserLogin = () => {
   );
 };
 
-export default UserLogin;
+export default AdminLogin;

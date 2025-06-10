@@ -1,4 +1,3 @@
-
 import { createTaskService, deleteTaskService, getAllTaskService, getTaskByUserService, updateTaskService} from "../service/taskService.js";
 import {taskRepository} from '../repository/taskRepository.js';
 
@@ -31,20 +30,76 @@ export const updateTaskController = async function (req, res) {
     try {
         const taskId = req.params.taskId;
         const statusToUpdate = req.body;
+        console.log('Update request received:', { taskId, statusToUpdate, userId: req.user._id });
 
-        const response = await updateTaskService(taskId, statusToUpdate);
-        res.status(201).send({
-            success: true,
-            message: "Task Updated",
-            data: response
-          });
+        // Get the task to check ownership
+        const task = await taskRepository.getTaskById(taskId);
+        if (!task) {
+            console.log('Task not found:', taskId);
+            return res.status(404).json({
+                success: false,
+                message: "Task not found"
+            });
+        }
+        console.log('Found task:', task);
+
+        // If user is not admin, check if they own the task
+        if (req.user.usertype !== 'admin') {
+            // Convert ObjectId to string for comparison
+            const taskAssignedTo = task.assignedTo._id ? task.assignedTo._id.toString() : task.assignedTo.toString();
+            const userId = req.user._id.toString();
+            console.log('Checking task ownership:', { taskAssignedTo, userId });
+
+            if (taskAssignedTo !== userId) {
+                console.log('Task ownership validation failed');
+                return res.status(403).json({
+                    success: false,
+                    message: "You can only update your own tasks"
+                });
+            }
+        }
+
+        try {
+            // Ensure we're passing the correct data structure
+            const updateData = {
+                status: statusToUpdate.status,
+                version: statusToUpdate.version
+            };
+            console.log('Attempting to update task with data:', updateData);
+
+            const updatedTask = await updateTaskService(taskId, updateData, req.user._id);
+            console.log('Task updated successfully:', updatedTask);
+
+            return res.status(200).json({
+                success: true,
+                message: "Task status updated successfully",
+                data: updatedTask
+            });
+        } catch (error) {
+            if (error.code === "CONCURRENT_UPDATE") {
+                // Handle concurrent update scenario
+                console.log('Concurrent update detected:', error);
+                const formattedTimestamp = new Date(error.lastUpdateTimestamp).toLocaleString();
+                const updatedByUser = error.lastUpdatedBy.username || 'another user';
+                
+                return res.status(409).json({
+                    success: false,
+                    message: `Task was already updated by ${updatedByUser} at ${formattedTimestamp}`,
+                    currentStatus: error.currentStatus,
+                    lastUpdatedBy: error.lastUpdatedBy,
+                    lastUpdateTimestamp: error.lastUpdateTimestamp
+                });
+            }
+            throw error;
+        }
     } catch (error) {
-        console.error("Error in updating Task controller", error);
-        res.status(500).send({
-        success: false,
-        message: "Internal Server Error",
-        error: error.message
-      });
+        console.error("Error in updating Task controller:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 };
 
@@ -90,14 +145,13 @@ export const getTaskByUserController = async function (req, res) {
     try {
         const userId = req.params.userId;
 
-        // console.log(userId);
-
-        if (req.user.id !== userId) {
+        // Allow admins to view any user's tasks
+        if (req.user.usertype !== 'admin' && req.user.id !== userId) {
             return res.status(403).json({
                 success: false,
-                message: "Access denied. You can only view your own task."
+                message: "Access denied. You can only view your own tasks."
             });
-        };
+        }
 
         const response = await getTaskByUserService(userId);
         res.status(201).send({
@@ -108,46 +162,71 @@ export const getTaskByUserController = async function (req, res) {
     } catch (error) {
         console.error("Error in get Task By User controller", error);
         res.status(500).send({
-        success: false,
-        message: "Internal Server Error",
-        error: error.message
-      });
+            success: false,
+            message: "Internal Server Error",
+            error: error.message
+        });
     }  
 };
 
 
 export const modifyTaskController = async (req, res) => {
     try {
-        const taskId = req.params.taskId; // Get task ID from URL
-        const { title, description, deadline, priority, status, assignedTo } = req.body; // Destructure request body
-        console.log(taskId);
+        const taskId = req.params.taskId;
+        const { title, description, deadline, priority, status, assignedTo } = req.body;
+        console.log('Received update request for task:', taskId);
+        console.log('Update data:', { title, description, deadline, priority, status, assignedTo });
+
         // Check if task exists
         const existingTask = await taskRepository.getTaskById(taskId);
         if (!existingTask) {
-            return res.status(404).json({ success: false, message: 'Task not found' });
+            console.log('Task not found:', taskId);
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Task not found' 
+            });
+        }
+        console.log('Existing task:', existingTask);
+
+        // Validate required fields
+        if (!title || !description || !deadline || !priority || !status || !assignedTo) {
+            console.log('Missing required fields');
+            return res.status(400).json({
+                success: false,
+                message: 'All fields are required'
+            });
         }
 
         // Update task details
         const updatedTask = await taskRepository.update(taskId, {
             title,
             description,
-            deadline,
+            deadline: new Date(deadline),
             priority,
             status,
-            assignedTo, // Update assignedTo if necessary
+            assignedTo
         });
+        console.log('Task updated:', updatedTask);
+
+        if (!updatedTask) {
+            console.log('Failed to update task');
+            return res.status(400).json({
+                success: false,
+                message: 'Failed to update task'
+            });
+        }
 
         return res.status(200).json({
             success: true,
             message: 'Task updated successfully',
-            data: updatedTask,
+            data: updatedTask
         });
     } catch (error) {
         console.error("Error updating task:", error);
         return res.status(500).json({
             success: false,
             message: 'Internal server error',
-            error: error.message,
+            error: error.message
         });
     }
 };

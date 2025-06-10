@@ -1,158 +1,189 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import "bootstrap/dist/css/bootstrap.min.css";
+import React, { useState, useEffect, useContext } from 'react';
+import { Link } from 'react-router-dom';
+import axios from 'axios';
+import {
+  MDBContainer,
+  MDBRow,
+  MDBCol,
+  MDBCard,
+  MDBCardBody,
+  MDBIcon,
+  MDBBtn,
+  MDBSpinner,
+  MDBTypography
+} from 'mdb-react-ui-kit';
+import { AuthContext } from '../context/AuthContext';
+import '../styles/Dashboard.css';
+import { API_ENDPOINTS } from '../config/api';
 
-const UserDashboard = () => {
-    const [tasks, setTasks] = useState([]);
-    const [filteredTasks, setFilteredTasks] = useState([]); // For search & filters
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [userId, setUserId] = useState(null);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [statusFilter, setStatusFilter] = useState("All"); // Default filter
+function UserDashboard() {
+  const [taskStats, setTaskStats] = useState({
+    total: 0,
+    completed: 0,
+    pending: 0,
+    inProgress: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { user } = useContext(AuthContext);
 
-    useEffect(() => {
-        fetchUserData();
-    }, []);
+  useEffect(() => {
+    fetchTaskStats();
+  }, []);
 
-    const fetchUserData = async () => {
-        try {
-            const token = localStorage.getItem("userToken");
-            if (!token) throw new Error("No token found. Please log in.");
+  const fetchTaskStats = async () => {
+    try {
+      const token = localStorage.getItem('userToken');
+      const userId = localStorage.getItem('userId');
 
-            const userResponse = await axios.get("http://localhost:5000/api/v1/users", {
-                headers: { "x-access-token": token },
-            });
+      if (!token || !userId) {
+        throw new Error('Authentication information missing');
+      }
 
-            const loggedInEmail = localStorage.getItem("userEmail");
-            const userData = userResponse.data.data.find(user => user.email === loggedInEmail);
-
-            if (!userData) throw new Error("User not found");
-
-            setUserId(userData._id);
-            fetchTasks(userData._id, token);
-        } catch (error) {
-            setError("Failed to fetch user details");
-            setLoading(false);
+      const response = await axios.get(API_ENDPOINTS.GET_USER_TASKS(userId), {
+        headers: { 
+          'x-access-token': token,
+          'Content-Type': 'application/json'
         }
-    };
+      });
+      
+      if (response.data.success) {
+        const tasks = response.data.data || [];
+        
+        const stats = tasks.reduce((acc, task) => {
+          acc.total++;
+          const status = task.status.toLowerCase().replace(/\s+/g, '');
+          if (acc[status] !== undefined) {
+            acc[status]++;
+          }
+          return acc;
+        }, { total: 0, completed: 0, pending: 0, inProgress: 0 });
+        
+        setTaskStats(stats);
+      } else {
+        throw new Error(response.data.message || 'Failed to fetch tasks');
+      }
+    } catch (error) {
+      console.error('Error fetching task stats:', error);
+      setError(error.response?.data?.message || error.message || 'Failed to fetch task statistics');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const fetchTasks = async (userId, token) => {
-        try {
-            const response = await axios.get(`http://localhost:5000/api/v1/task/${userId}`, {
-                headers: { "x-access-token": token },
-            });
-
-            setTasks(response.data.data);
-            setFilteredTasks(response.data.data);
-        } catch (error) {
-            setError("Failed to fetch tasks");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const refreshTasks = () => {
-        setLoading(true);
-        fetchTasks(userId, localStorage.getItem("userToken"));
-    };
-
-    const handleSearch = (e) => {
-        const query = e.target.value.toLowerCase();
-        setSearchQuery(query);
-        filterTasks(query, statusFilter);
-    };
-
-    const handleFilterChange = (e) => {
-        const filter = e.target.value;
-        setStatusFilter(filter);
-        filterTasks(searchQuery, filter); // Apply filtering immediately
-    };
-    
-    
-    
-    const filterTasks = (query, filter) => {
-        let updatedTasks = [...tasks]; // Make sure to use the original list
-    
-        // ✅ Apply status filtering
-        if (filter !== "All") {
-            updatedTasks = updatedTasks.filter(task => task.status === filter);
-        }
-    
-        // ✅ Apply search filtering
-        if (query) {
-            updatedTasks = updatedTasks.filter(task =>
-                task.title.toLowerCase().includes(query)
-            );
-        }
-    
-        setFilteredTasks(updatedTasks);
-    };
-    
-    
- 
-
+  if (loading) {
     return (
-        <div className="container-fluid min-vh-100 bg-light p-4">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <h2 className="text-primary">📋 Assigned Tasks</h2>
-                <button className="btn btn-success" onClick={refreshTasks}>
-                    🔄 Refresh
-                </button>
-            </div>
-
-            {/* Search & Filter */}
-            <div className="row mb-3">
-                <div className="col-md-6">
-                    <input
-                        type="text"
-                        className="form-control"
-                        placeholder="🔍 Search tasks by title..."
-                        value={searchQuery}
-                        onChange={handleSearch}
-                    />
-                </div>
-                {/* <div className="col-md-4">
-                    <select className="form-select" value={statusFilter} onChange={handleFilterChange}>
-                        <option value="All">All Status</option>
-                        <option value="Pending">Pending</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Completed">Completed</option>
-                    </select>
-                </div> */}
-            </div>
-
-            {loading ? (
-                <p className="text-center text-warning">⏳ Loading tasks...</p>
-            ) : error ? (
-                <p className="text-center text-danger">{error}</p>
-            ) : filteredTasks.length > 0 ? (
-                <div className="row">
-                    {filteredTasks.map((task) => (
-                        <div key={task._id} className="col-lg-4 col-md-6 mb-4">
-                            <div className="card shadow-sm border-0">
-                                <div className="card-body">
-                                    <h5 className="card-title text-dark">{task.title}</h5>
-                                    <p className="card-text text-muted">{task.description}</p>
-                                    <p className="text-secondary">
-                                        <strong>📅 Deadline:</strong> {new Date(task.deadline).toLocaleDateString()}
-                                    </p>
-                                    <p className="text-secondary">
-                                        <strong>👤 Assigned By:</strong> {task.assignedBy?.username}
-                                    </p>
-                                    <span className={`badge ${task.status === "Completed" ? "bg-success" : "bg-warning"} text-dark`}>
-                                        <strong>📌 Status:</strong> {task.status}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <p className="text-center text-muted">🚫 No tasks assigned yet.</p>
-            )}
-        </div>
+      <div className="loading-spinner">
+        <MDBSpinner role='status'>
+          <span className='visually-hidden'>Loading...</span>
+        </MDBSpinner>
+      </div>
     );
-};
+  }
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <MDBIcon fas icon="exclamation-circle" className="error-icon" />
+        <h3>Error Loading Dashboard</h3>
+        <p className="error-message">{error}</p>
+        <MDBBtn color="primary" onClick={() => window.location.reload()}>
+          Try Again
+        </MDBBtn>
+      </div>
+    );
+  }
+
+  return (
+    <div className="dashboard-container">
+      {/* Welcome Section */}
+      <div className="welcome-section animate-fadeInUp">
+        <MDBTypography tag='h1' className="welcome-title">
+          Welcome back, {user?.username || 'User'}!
+        </MDBTypography>
+        <p className="mb-0">Here's an overview of your tasks and activities</p>
+      </div>
+      
+      {/* Task Statistics */}
+      <MDBRow className="g-4 mb-4">
+        <MDBCol xl="3" md="6">
+          <div className="stats-card animate-fadeInUp">
+            <div className="stats-icon total">
+              <MDBIcon fas icon="tasks" />
+            </div>
+            <div className="stats-value">{taskStats.total}</div>
+            <div className="stats-label">Total Tasks</div>
+          </div>
+        </MDBCol>
+
+        <MDBCol xl="3" md="6">
+          <div className="stats-card animate-fadeInUp" style={{animationDelay: '0.1s'}}>
+            <div className="stats-icon completed">
+              <MDBIcon fas icon="check-circle" />
+            </div>
+            <div className="stats-value">{taskStats.completed}</div>
+            <div className="stats-label">Completed Tasks</div>
+          </div>
+        </MDBCol>
+
+        <MDBCol xl="3" md="6">
+          <div className="stats-card animate-fadeInUp" style={{animationDelay: '0.2s'}}>
+            <div className="stats-icon in-progress">
+              <MDBIcon fas icon="clock" />
+            </div>
+            <div className="stats-value">{taskStats.inProgress}</div>
+            <div className="stats-label">In Progress</div>
+          </div>
+        </MDBCol>
+
+        <MDBCol xl="3" md="6">
+          <div className="stats-card animate-fadeInUp" style={{animationDelay: '0.3s'}}>
+            <div className="stats-icon pending">
+              <MDBIcon fas icon="hourglass-start" />
+            </div>
+            <div className="stats-value">{taskStats.pending}</div>
+            <div className="stats-label">Pending Tasks</div>
+          </div>
+        </MDBCol>
+      </MDBRow>
+
+      {/* Quick Actions */}
+      <section className="quick-actions">
+        <MDBTypography tag='h2' className="mb-4">Quick Actions</MDBTypography>
+        <MDBRow className="g-4">
+          <MDBCol md="6" lg="4">
+            <Link to="/my-tasks" className="text-decoration-none">
+              <div className="action-card animate-fadeInUp" style={{animationDelay: '0.4s'}}>
+                <MDBIcon fas icon="clipboard-list" className="action-icon text-primary" />
+                <h3 className="action-title">View My Tasks</h3>
+                <p className="action-description">Check your assigned tasks and their status</p>
+              </div>
+            </Link>
+          </MDBCol>
+
+          <MDBCol md="6" lg="4">
+            <Link to="/task-history" className="text-decoration-none">
+              <div className="action-card animate-fadeInUp" style={{animationDelay: '0.5s'}}>
+                <MDBIcon fas icon="history" className="action-icon text-info" />
+                <h3 className="action-title">Task History</h3>
+                <p className="action-description">View your completed tasks and performance</p>
+              </div>
+            </Link>
+          </MDBCol>
+
+          <MDBCol md="6" lg="4">
+            <Link to="/user-profile" className="text-decoration-none">
+              <div className="action-card animate-fadeInUp" style={{animationDelay: '0.6s'}}>
+                <MDBIcon fas icon="user-circle" className="action-icon text-success" />
+                <h3 className="action-title">Profile Settings</h3>
+                <p className="action-description">Update your profile information</p>
+              </div>
+            </Link>
+          </MDBCol>
+        </MDBRow>
+      </section>
+    </div>
+  );
+}
 
 export default UserDashboard;

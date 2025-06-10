@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 import {
   MDBBtn,
   MDBContainer,
@@ -15,6 +16,8 @@ import {
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "mdb-react-ui-kit/dist/css/mdb.min.css";
+import "../styles/Auth.css";
+import { API_ENDPOINTS } from '../config/api';
 
 const UserLogin = () => {
   const [formData, setFormData] = useState({
@@ -24,6 +27,7 @@ const UserLogin = () => {
   const [message, setMessage] = useState({ type: "", text: "" });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { dispatch } = useContext(AuthContext);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -37,11 +41,29 @@ const UserLogin = () => {
     }
     setLoading(true);
     try {
-      const response = await axios.post("http://localhost:5000/api/v1/users/login", formData);
-      localStorage.setItem("userToken", response.data.data.token);
-      localStorage.setItem("userEmail", formData.email);
+      const response = await axios.post(API_ENDPOINTS.USER_LOGIN, formData);
+      const { token, user } = response.data.data;
+      
+      localStorage.setItem("userToken", token);
+      localStorage.setItem("userId", user._id);
+      localStorage.setItem("userEmail", user.email);
+      localStorage.setItem("userName", user.username);
+      localStorage.setItem("userType", user.usertype || 'user');
+      
+      dispatch({ 
+        type: 'LOGIN', 
+        payload: { 
+          id: user._id,
+          email: user.email,
+          username: user.username,
+          role: 'user',
+          usertype: user.usertype || 'user',
+          token: token
+        }
+      });
+
       setMessage({ type: "success", text: "Login Successful. Redirecting..." });
-      setTimeout(() => navigate("/user-dashboard"), 1000);
+      navigate("/user-dashboard");
     } catch (error) {
       setMessage({ type: "error", text: error.response?.data?.message || "Login failed" });
     } finally {
@@ -50,32 +72,74 @@ const UserLogin = () => {
   };
 
   return (
-    <MDBContainer fluid>
-      <MDBCard className="text-black m-5" style={{ borderRadius: "25px" }}>
+    <MDBContainer fluid className="auth-container">
+      <MDBCard className="auth-card">
         <MDBCardBody>
           <MDBRow>
-            <MDBCol md="10" lg="6" className="order-2 order-lg-1 d-flex flex-column align-items-center">
-              <h1 className="text-center fw-bold mb-5 mt-4">User Login</h1>
+            <MDBCol md="10" lg="6" className="order-2 order-lg-1 auth-form-section">
+              <h1 className="auth-title">User Login</h1>
+              
               {message.text && (
-                <p className={message.type === "error" ? "text-danger" : "text-success"}>{message.text}</p>
+                <div className={`auth-message ${message.type}`}>
+                  {message.text}
+                </div>
               )}
-              <div className="d-flex flex-row align-items-center mb-4">
-                <MDBIcon fas icon="envelope me-3" size="lg" />
-                <MDBInput label="User Email" id="form2" type="email" name="email" value={formData.email} onChange={handleChange} />
-              </div>
-              <div className="d-flex flex-row align-items-center mb-4">
-                <MDBIcon fas icon="lock me-3" size="lg" />
-                <MDBInput label="Password" id="form3" type="password" name="password" value={formData.password} onChange={handleChange} />
-              </div>
-              <MDBBtn className="mb-4" size="lg" onClick={handleSubmit} disabled={loading}>
-                {loading ? "Logging in..." : "Login"}
-              </MDBBtn>
-              <p className="login-link">
-                Don't have an account? <Link to="/user">Sign Up Here</Link>
-              </p>
+
+              <form onSubmit={handleSubmit}>
+                <div className="auth-input-group">
+                  <MDBIcon fas icon="envelope" className="input-icon position-absolute" style={{ left: '1rem', top: '1.1rem' }} />
+                  <MDBInput
+                    label="User Email"
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="auth-input"
+                    required
+                  />
+                </div>
+
+                <div className="auth-input-group">
+                  <MDBIcon fas icon="lock" className="input-icon position-absolute" style={{ left: '1rem', top: '1.1rem' }} />
+                  <MDBInput
+                    label="Password"
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="auth-input"
+                    required
+                  />
+                </div>
+
+                <MDBBtn 
+                  type="submit"
+                  disabled={loading}
+                  className="auth-submit-btn"
+                >
+                  {loading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Logging in...
+                    </>
+                  ) : (
+                    'Login'
+                  )}
+                </MDBBtn>
+
+                <p className="auth-link">
+                  Don't have an account? <Link to="/register-user">Sign Up Here</Link>
+                </p>
+              </form>
             </MDBCol>
-            <MDBCol md="10" lg="6" className="order-1 order-lg-2 d-flex align-items-center">
-              <MDBCardImage src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-login-form/draw2.webp" fluid />
+
+            <MDBCol md="10" lg="6" className="order-1 order-lg-2 auth-image-section">
+              <MDBCardImage 
+                src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-login-form/draw2.webp"
+                fluid
+                className="auth-image"
+                alt="User Login"
+              />
             </MDBCol>
           </MDBRow>
         </MDBCardBody>

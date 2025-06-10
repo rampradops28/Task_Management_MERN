@@ -1,3 +1,5 @@
+ 
+
 /*
 .signup-container {
   max-width: 400px;
@@ -561,3 +563,88 @@ body {
   }
 }
  */
+
+/* General layout styles */
+.authenticated-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.authenticated-content {
+  flex: 1;
+  padding-top: 76px; /* Height of the navbar */
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Public layout styles */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Ensure proper stacking context */
+.authenticated-layout .navbar-custom {
+  z-index: 1030;
+}
+
+/* Add some basic responsive padding */
+@media (max-width: 768px) {
+  .authenticated-content {
+    padding-top: 64px; /* Slightly smaller padding on mobile */
+  }
+}
+
+/* Authenticated layout specific styles */
+.app-container:has(> .navbar) .main-content {
+  background-color: #f8f9fa;
+  padding-top: 2rem;
+}
+
+/* Public layout specific styles */
+.app-container:not(:has(> .navbar)) .main-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(45deg, #6a11cb, #2575fc);
+}
+
+/* Ensure the navbar stays on top */
+.navbar {
+  z-index: 1000;
+}
+
+/* Authentication form styles */
+.auth-form-container {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  margin: 1rem;
+}
+
+.auth-form-container h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .auth-form-container {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+}
