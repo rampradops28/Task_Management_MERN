@@ -3,6 +3,7 @@ import { createServer } from "http";
 import cors from "cors";
 import apiRouter from "./src/routes/apiRouter.js";
 import { PORT } from "./src/config/serverConfig.js";
+import { FRONTEND } from "./src/config/serverConfig.js";
 import { connectDB } from "./src/config/dbConfig.js";
 
 const app = express();
@@ -10,7 +11,8 @@ const httpServer = createServer(app);
 
 // CORS configuration
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", // local dev frontend
+    "https://task-management-mern-amber.vercel.app"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization", "x-access-token"],
     credentials: true

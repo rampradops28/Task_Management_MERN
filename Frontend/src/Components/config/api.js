@@ -1,5 +1,5 @@
 // Get the backend URL from environment variables with a fallback
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 export const API_ENDPOINTS = {
     // User endpoints
