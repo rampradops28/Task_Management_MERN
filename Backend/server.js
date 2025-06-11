@@ -11,8 +11,7 @@ const httpServer = createServer(app);
 
 // CORS configuration
 app.use(cors({
-    origin: ["http://localhost:5173", // local dev frontend
-    "https://task-management-mern-amber.vercel.app"],
+    origin: "http://localhost:5173" ,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization", "x-access-token"],
     credentials: true
