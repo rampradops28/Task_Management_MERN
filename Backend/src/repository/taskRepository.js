@@ -45,28 +45,13 @@ export const taskRepository = {
       }
    },
 
-   update: async function (taskId, updateData, userId, expectedVersion) {
+   // Updated: Remove version/concurrency logic
+   update: async function (taskId, updateData, userId) {
       try {
-         // Find the task and check its version
-         const task = await Task.findById(taskId);
-         if (!task) {
-            throw new Error("Task not found");
-         }
-
-         // Check if the version matches
-         if (task.version !== expectedVersion) {
-            throw new Error("CONCURRENT_UPDATE");
-         }
-
-         // Update the task with version increment and update metadata
-         const updatedTask = await Task.findOneAndUpdate(
-            { 
-               _id: taskId,
-               version: expectedVersion
-            },
+         const updatedTask = await Task.findByIdAndUpdate(
+            taskId,
             {
                ...updateData,
-               version: expectedVersion + 1,
                lastUpdatedBy: userId,
                lastUpdateTimestamp: new Date()
             },
@@ -74,12 +59,13 @@ export const taskRepository = {
                new: true,
                runValidators: true
             }
-         ).populate('assignedBy', 'username email')
-          .populate('assignedTo', 'username email')
-          .populate('lastUpdatedBy', 'username email');
+         )
+         .populate('assignedBy', 'username email')
+         .populate('assignedTo', 'username email')
+         .populate('lastUpdatedBy', 'username email');
 
          if (!updatedTask) {
-            throw new Error("CONCURRENT_UPDATE");
+            throw new Error("Task not found");
          }
 
          return updatedTask;

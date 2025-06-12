@@ -45,7 +45,7 @@ const AdminProfile = () => {
 
     try {
       const token = localStorage.getItem('AdminToken');
-      const response = await axios.post(
+      const response = await axios.put(
         API_ENDPOINTS.ADMIN_UPDATE_PASSWORD,
         {
           oldPassword: passwordData.oldPassword,

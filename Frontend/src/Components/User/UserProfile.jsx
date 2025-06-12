@@ -44,7 +44,7 @@ const UserProfile = () => {
 
     try {
       const token = localStorage.getItem('userToken');
-      const response = await axios.post(
+      const response = await axios.put(
         API_ENDPOINTS.USER_UPDATE_PASSWORD,
         {
           oldPassword: passwordData.oldPassword,

@@ -11,7 +11,7 @@ const httpServer = createServer(app);
 
 // CORS configuration
 app.use(cors({
-    origin: "http://localhost:5173" ,
+    origin: FRONTEND ,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization", "x-access-token"],
     credentials: true

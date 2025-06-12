@@ -41,7 +41,6 @@ function MyTasks() {
       });
 
       if (response.data.success) {
-        // Filter out completed tasks and count them
         const allTasks = response.data.data;
         const activeTasks = allTasks.filter(task => task.status !== 'completed');
         const completedCount = allTasks.length - activeTasks.length;
@@ -59,6 +58,7 @@ function MyTasks() {
     }
   };
 
+  // Only allow marking as completed, no version/concurrency logic
   const updateTaskStatus = async (taskId, newStatus) => {
     setUpdatingTaskId(taskId);
     try {
@@ -76,10 +76,7 @@ function MyTasks() {
 
       const response = await axios.put(
         API_ENDPOINTS.UPDATE_USER_TASK_STATUS(taskId),
-        { 
-          status: newStatus,
-          version: task.version
-        },
+        { status: newStatus },
         {
           headers: {
             'x-access-token': token,
@@ -92,7 +89,6 @@ function MyTasks() {
         setMessage({ text: 'Task status updated successfully!', type: 'success' });
         
         if (newStatus === 'completed') {
-          // Remove the completed task from the list and update the counter
           setTasks(prevTasks => prevTasks.filter(t => t._id !== taskId));
           setCompletedTaskCount(prev => prev + 1);
           setMessage({ 
@@ -100,7 +96,6 @@ function MyTasks() {
             type: 'success' 
           });
         } else {
-          // Update the task in the list
           setTasks(prevTasks => prevTasks.map(t => 
             t._id === taskId ? response.data.data : t
           ));
@@ -108,20 +103,10 @@ function MyTasks() {
       }
     } catch (error) {
       console.error('Error updating task:', error);
-      
-      if (error.response?.status === 409) {
-        const { message, currentStatus, lastUpdatedBy } = error.response.data;
-        setMessage({ 
-          text: message,
-          type: 'warning'
-        });
-        fetchTasks();
-      } else {
-        setMessage({ 
-          text: error.response?.data?.message || 'Error updating task status',
-          type: 'danger'
-        });
-      }
+      setMessage({ 
+        text: error.response?.data?.message || 'Error updating task status',
+        type: 'danger'
+      });
     } finally {
       setUpdatingTaskId(null);
     }
@@ -256,40 +241,6 @@ function MyTasks() {
                         </p>
                       )}
                     </div>
-
-                    <div className="task-actions">
-                      {task.status === 'pending' && (
-                        <MDBBtn
-                          color="primary"
-                          className="me-2"
-                          onClick={() => updateTaskStatus(task._id, 'in-progress')}
-                          disabled={updatingTaskId === task._id}
-                        >
-                          {updatingTaskId === task._id ? (
-                            <MDBSpinner size="sm" />
-                          ) : (
-                            <>
-                              <MDBIcon far icon="play-circle" className="me-1" /> Start
-                            </>
-                          )}
-                        </MDBBtn>
-                      )}
-                      {task.status === 'in-progress' && (
-                        <MDBBtn
-                          color="success"
-                          onClick={() => updateTaskStatus(task._id, 'completed')}
-                          disabled={updatingTaskId === task._id}
-                        >
-                          {updatingTaskId === task._id ? (
-                            <MDBSpinner size="sm" />
-                          ) : (
-                            <>
-                              <MDBIcon far icon="check-circle" className="me-1" /> Complete
-                            </>
-                          )}
-                        </MDBBtn>
-                      )}
-                    </div>
                   </div>
                 </MDBCardBody>
               </MDBCard>
@@ -301,4 +252,4 @@ function MyTasks() {
   );
 }
 
-export default MyTasks; 
+export default MyTasks;

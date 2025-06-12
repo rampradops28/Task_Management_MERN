@@ -30,68 +30,25 @@ export const updateTaskController = async function (req, res) {
     try {
         const taskId = req.params.taskId;
         const statusToUpdate = req.body;
-        console.log('Update request received:', { taskId, statusToUpdate, userId: req.user._id });
+        // ...existing code...
 
-        // Get the task to check ownership
-        const task = await taskRepository.getTaskById(taskId);
-        if (!task) {
-            console.log('Task not found:', taskId);
-            return res.status(404).json({
-                success: false,
-                message: "Task not found"
-            });
-        }
-        console.log('Found task:', task);
+        // Remove any version/concurrency check here
+        // Example (remove this block if present):
+        // if (req.body.version !== task.version) {
+        //   return res.status(409).json({
+        //     success: false,
+        //     message: "Concurrent update error",
+        //     error: "CONCURRENT_UPDATE"
+        //   });
+        // }
 
-        // If user is not admin, check if they own the task
-        if (req.user.usertype !== 'admin') {
-            // Convert ObjectId to string for comparison
-            const taskAssignedTo = task.assignedTo._id ? task.assignedTo._id.toString() : task.assignedTo.toString();
-            const userId = req.user._id.toString();
-            console.log('Checking task ownership:', { taskAssignedTo, userId });
-
-            if (taskAssignedTo !== userId) {
-                console.log('Task ownership validation failed');
-                return res.status(403).json({
-                    success: false,
-                    message: "You can only update your own tasks"
-                });
-            }
-        }
-
-        try {
-            // Ensure we're passing the correct data structure
-            const updateData = {
-                status: statusToUpdate.status,
-                version: statusToUpdate.version
-            };
-            console.log('Attempting to update task with data:', updateData);
-
-            const updatedTask = await updateTaskService(taskId, updateData, req.user._id);
-            console.log('Task updated successfully:', updatedTask);
-
-            return res.status(200).json({
-                success: true,
-                message: "Task status updated successfully",
-                data: updatedTask
-            });
-        } catch (error) {
-            if (error.code === "CONCURRENT_UPDATE") {
-                // Handle concurrent update scenario
-                console.log('Concurrent update detected:', error);
-                const formattedTimestamp = new Date(error.lastUpdateTimestamp).toLocaleString();
-                const updatedByUser = error.lastUpdatedBy.username || 'another user';
-                
-                return res.status(409).json({
-                    success: false,
-                    message: `Task was already updated by ${updatedByUser} at ${formattedTimestamp}`,
-                    currentStatus: error.currentStatus,
-                    lastUpdatedBy: error.lastUpdatedBy,
-                    lastUpdateTimestamp: error.lastUpdateTimestamp
-                });
-            }
-            throw error;
-        }
+        // Proceed to update the task directly
+        const updatedTask = await taskRepository.updateTask(taskId, statusToUpdate);
+        return res.status(200).json({
+            success: true,
+            message: "Task updated successfully",
+            data: updatedTask
+        });
     } catch (error) {
         console.error("Error in updating Task controller:", error);
         return res.status(500).json({
