@@ -20,6 +20,8 @@ import {
   MDBDropdownItem,
 } from 'mdb-react-ui-kit';
 import '../styles/TaskHistory.css';
+import { API_ENDPOINTS } from '../config/api'; // Add this import at the top
+
 
 function TaskHistory() {
   const [completedTasks, setCompletedTasks] = useState([]);
@@ -49,9 +51,9 @@ function TaskHistory() {
         throw new Error('Authentication required');
       }
 
-      const response = await axios.get(`http://localhost:5000/api/v1/task/${userId}`, {
-        headers: { 'x-access-token': token }
-      });
+      const response = await axios.get(API_ENDPOINTS.GET_USER_TASKS(userId), {
+  headers: { 'x-access-token': token }
+});
 
       if (response.data.success) {
         const completedTasks = response.data.data.filter(task => task.status === 'completed');

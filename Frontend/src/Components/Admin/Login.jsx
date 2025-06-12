@@ -13,6 +13,8 @@ import {
   MDBInput,
   MDBIcon,
 } from "mdb-react-ui-kit";
+import { API_ENDPOINTS } from "../config/api"; // Add this import at the top
+
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "mdb-react-ui-kit/dist/css/mdb.min.css";
@@ -40,8 +42,7 @@ const AdminLogin = () => {
     }
     setLoading(true);
     try {
-      const response = await axios.post("http://localhost:5000/api/v1/users/login", formData);
-
+      const response = await axios.post(API_ENDPOINTS.USER_LOGIN, formData);
       if (response.data.success) {
         const { token, user } = response.data.data;
         

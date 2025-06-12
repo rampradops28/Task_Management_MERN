@@ -34,6 +34,7 @@ import { saveAs } from 'file-saver';
 import { utils, write } from 'xlsx';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { API_ENDPOINTS } from '../config/api';
 
 ChartJS.register(
   CategoryScale,
@@ -80,14 +81,14 @@ const AdminDashboard = () => {
       const headers = { 'x-access-token': token };
 
       // Fetch users
-      const usersResponse = await axios.get('http://localhost:5000/api/v1/users', { headers });
+      const usersResponse = await axios.get(API_ENDPOINTS.GET_USERS, { headers });
       const regularUsers = usersResponse.data.data.filter(user => 
         user.usertype !== 'admin' && user.role !== 'admin'
       );
       setUsers(regularUsers);
 
       // Fetch all tasks
-      const tasksResponse = await axios.get('http://localhost:5000/api/v1/task', { headers });
+      const tasksResponse = await axios.get(API_ENDPOINTS.GET_ALL_TASKS, { headers });
       const allTasks = tasksResponse.data.data;
       setTasks(allTasks);
 
