@@ -334,6 +334,54 @@ const AssignedTasks = () => {
     }
   };
 
+  // Approve a review-requested task
+  const approveTask = async (taskId) => {
+    try {
+      const token = localStorage.getItem('AdminToken');
+      const response = await axios.put(
+        API_ENDPOINTS.APPROVE_TASK(taskId),
+        {},
+        {
+          headers: {
+            'x-access-token': token,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      if (response.data.success) {
+        setMessage({ text: 'Task approved and marked as completed!', type: 'success' });
+        fetchTasks();
+      }
+    } catch (error) {
+      setMessage({ text: error.response?.data?.message || 'Error approving task', type: 'danger' });
+    }
+  };
+
+  // Reject a review-requested task
+  const rejectTask = async (taskId) => {
+    const reason = prompt('Enter rejection reason:');
+    if (!reason) return;
+    try {
+      const token = localStorage.getItem('AdminToken');
+      const response = await axios.put(
+        API_ENDPOINTS.REJECT_TASK(taskId),
+        { rejectionReason: reason },
+        {
+          headers: {
+            'x-access-token': token,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      if (response.data.success) {
+        setMessage({ text: 'Task review rejected.', type: 'success' });
+        fetchTasks();
+      }
+    } catch (error) {
+      setMessage({ text: error.response?.data?.message || 'Error rejecting task', type: 'danger' });
+    }
+  };
+
   if (loading) return (
     <MDBContainer className="py-5 text-center">
       <MDBIcon fas icon="spinner" spin size="3x" />
@@ -386,18 +434,35 @@ const AssignedTasks = () => {
                   <MDBBtn color='primary' size='sm' onClick={() => handleEditClick(task)}>
                     <MDBIcon fas icon="edit" className="me-2" /> Edit
                   </MDBBtn>
-                  <MDBBtn 
-                    color='success' 
-                    size='sm'
-                    onClick={() => updateTaskStatus(task._id, 'completed')}
-                    disabled={task.status === 'completed'}
-                  >
-                    <MDBIcon fas icon="check" className="me-2" /> Complete
-                  </MDBBtn>
+                  {task.status === 'review-requested' ? (
+                    <>
+                      <MDBBtn color='success' size='sm' onClick={() => approveTask(task._id)}>
+                        <MDBIcon fas icon="check" className="me-2" /> Approve
+                      </MDBBtn>
+                      <MDBBtn color='danger' size='sm' onClick={() => rejectTask(task._id)}>
+                        <MDBIcon fas icon="times" className="me-2" /> Reject
+                      </MDBBtn>
+                    </>
+                  ) : (
+                    <MDBBtn 
+                      color='success' 
+                      size='sm'
+                      onClick={() => updateTaskStatus(task._id, 'completed')}
+                      disabled={task.status === 'completed'}
+                    >
+                      <MDBIcon fas icon="check" className="me-2" /> Complete
+                    </MDBBtn>
+                  )}
                   <MDBBtn color='danger' size='sm' onClick={() => deleteTask(task._id)}>
                     <MDBIcon fas icon="trash" />
                   </MDBBtn>
                 </div>
+                {task.status === 'rejected' && task.rejectionReason && (
+                  <div className="mt-2 text-danger">
+                    <MDBIcon fas icon="exclamation-circle" className="me-2" />
+                    Rejection Reason: {task.rejectionReason}
+                  </div>
+                )}
               </MDBCardBody>
             </MDBCard>
           </MDBCol>

@@ -1,5 +1,5 @@
 import express from "express";
-import { createTaskController, deleteTaskController, getAdminTasks, getAllTaskController, getTaskByUserController, modifyTaskController, updateTaskController } from "../../controller/taskController.js";
+import { createTaskController, deleteTaskController, getAdminTasks, getAllTaskController, getTaskByUserController, modifyTaskController, updateTaskController, userRequestReviewController, adminApproveTaskController, adminRejectTaskController } from "../../controller/taskController.js";
 import { isAdmin, isAuthenticated } from "../../middleware/authValidation.js";
 
 // Router object
@@ -25,6 +25,15 @@ taskRouter.get('/:userId', isAuthenticated, getTaskByUserController);
 
 // Update task (full update)
 taskRouter.put('/:taskId', isAuthenticated, isAdmin, modifyTaskController);
+
+// User requests review
+taskRouter.put('/request-review/:taskId', isAuthenticated, userRequestReviewController);
+
+// Admin approves task
+taskRouter.put('/approve/:taskId', isAuthenticated, isAdmin, adminApproveTaskController);
+
+// Admin rejects task
+taskRouter.put('/reject/:taskId', isAuthenticated, isAdmin, adminRejectTaskController);
 
 taskRouter.get("/admin-tasks", (req, res) => {
     console.log(" Route /admin/tasks hit");

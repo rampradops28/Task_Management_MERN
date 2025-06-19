@@ -58,25 +58,15 @@ function MyTasks() {
     }
   };
 
-  // Only allow marking as completed, no version/concurrency logic
-  const updateTaskStatus = async (taskId, newStatus) => {
+  // Allow user to start a task (pending -> in-progress)
+  const startTask = async (taskId) => {
     setUpdatingTaskId(taskId);
     try {
       const token = localStorage.getItem('userToken');
-      const userId = localStorage.getItem('userId');
-
-      if (!token || !userId) {
-        throw new Error('Authentication required');
-      }
-
-      const task = tasks.find(t => t._id === taskId);
-      if (!task) {
-        throw new Error('Task not found');
-      }
-
+      if (!token) throw new Error('Authentication required');
       const response = await axios.put(
         API_ENDPOINTS.UPDATE_USER_TASK_STATUS(taskId),
-        { status: newStatus },
+        { status: 'in-progress' },
         {
           headers: {
             'x-access-token': token,
@@ -84,29 +74,39 @@ function MyTasks() {
           }
         }
       );
-
       if (response.data.success) {
-        setMessage({ text: 'Task status updated successfully!', type: 'success' });
-        
-        if (newStatus === 'completed') {
-          setTasks(prevTasks => prevTasks.filter(t => t._id !== taskId));
-          setCompletedTaskCount(prev => prev + 1);
-          setMessage({ 
-            text: '🎉 Congratulations! Task completed successfully!', 
-            type: 'success' 
-          });
-        } else {
-          setTasks(prevTasks => prevTasks.map(t => 
-            t._id === taskId ? response.data.data : t
-          ));
-        }
+        setMessage({ text: 'Task started!', type: 'success' });
+        setTasks(prevTasks => prevTasks.map(t => t._id === taskId ? response.data.data : t));
       }
     } catch (error) {
-      console.error('Error updating task:', error);
-      setMessage({ 
-        text: error.response?.data?.message || 'Error updating task status',
-        type: 'danger'
-      });
+      setMessage({ text: error.response?.data?.message || 'Error starting task', type: 'danger' });
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  };
+
+  // Only allow requesting review, not direct completion
+  const requestReview = async (taskId) => {
+    setUpdatingTaskId(taskId);
+    try {
+      const token = localStorage.getItem('userToken');
+      if (!token) throw new Error('Authentication required');
+      const response = await axios.put(
+        API_ENDPOINTS.REQUEST_REVIEW(taskId),
+        {},
+        {
+          headers: {
+            'x-access-token': token,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      if (response.data.success) {
+        setMessage({ text: 'Review requested! Await admin approval.', type: 'success' });
+        setTasks(prevTasks => prevTasks.map(t => t._id === taskId ? response.data.data : t));
+      }
+    } catch (error) {
+      setMessage({ text: error.response?.data?.message || 'Error requesting review', type: 'danger' });
     } finally {
       setUpdatingTaskId(null);
     }
@@ -240,7 +240,52 @@ function MyTasks() {
                           </small>
                         </p>
                       )}
+                      {task.status === 'rejected' && task.rejectionReason && (
+                        <p className="mb-0 text-danger">
+                          <small>Rejected: {task.rejectionReason}</small>
+                        </p>
+                      )}
                     </div>
+                    {task.status === 'pending' && (
+                      <MDBBtn
+                        color="primary"
+                        size="sm"
+                        disabled={updatingTaskId === task._id}
+                        onClick={() => startTask(task._id)}
+                      >
+                        {updatingTaskId === task._id ? (
+                          <MDBSpinner size="sm" />
+                        ) : (
+                          <>
+                            <MDBIcon fas icon="play" className="me-2" />
+                            Start Task
+                          </>
+                        )}
+                      </MDBBtn>
+                    )}
+                    {task.status === 'in-progress' && (
+                      <MDBBtn
+                        color="warning"
+                        size="sm"
+                        disabled={updatingTaskId === task._id}
+                        onClick={() => requestReview(task._id)}
+                      >
+                        {updatingTaskId === task._id ? (
+                          <MDBSpinner size="sm" />
+                        ) : (
+                          <>
+                            <MDBIcon fas icon="paper-plane" className="me-2" />
+                            Request Review
+                          </>
+                        )}
+                      </MDBBtn>
+                    )}
+                    {task.status === 'review-requested' && (
+                      <MDBBadge color="info">Review Requested</MDBBadge>
+                    )}
+                    {task.status === 'rejected' && (
+                      <MDBBadge color="danger">Rejected</MDBBadge>
+                    )}
                   </div>
                 </MDBCardBody>
               </MDBCard>

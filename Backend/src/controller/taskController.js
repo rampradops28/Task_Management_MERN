@@ -29,34 +29,17 @@ export const createTaskController = async function (req, res) {
 export const updateTaskController = async function (req, res) {
     try {
         const taskId = req.params.taskId;
-        const statusToUpdate = req.body;
-        // ...existing code...
-
-        // Remove any version/concurrency check here
-        // Example (remove this block if present):
-        // if (req.body.version !== task.version) {
-        //   return res.status(409).json({
-        //     success: false,
-        //     message: "Concurrent update error",
-        //     error: "CONCURRENT_UPDATE"
-        //   });
-        // }
-
-        // Proceed to update the task directly
-        const updatedTask = await taskRepository.updateTask(taskId, statusToUpdate);
+        const updateData = req.body;
+        const userId = req.user._id;
+        const userType = req.user.usertype;
+        const updatedTask = await updateTaskService(taskId, updateData, userId, userType);
         return res.status(200).json({
             success: true,
             message: "Task updated successfully",
             data: updatedTask
         });
     } catch (error) {
-        console.error("Error in updating Task controller:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal Server Error",
-            error: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        });
+        return res.status(400).json({ success: false, message: error.message });
     }
 };
 
@@ -223,5 +206,60 @@ export const getAdminTasks = async (req, res) => {
             success: false,
             message: "Server error"
         });
+    }
+};
+
+// User requests review
+export const userRequestReviewController = async function (req, res) {
+    try {
+        const taskId = req.params.taskId;
+        const userId = req.user._id;
+        const userType = req.user.usertype;
+        const updateData = { status: 'review-requested' };
+        const updatedTask = await updateTaskService(taskId, updateData, userId, userType);
+        return res.status(200).json({
+            success: true,
+            message: "Task review requested",
+            data: updatedTask
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+// Admin approves task
+export const adminApproveTaskController = async function (req, res) {
+    try {
+        const taskId = req.params.taskId;
+        const userId = req.user._id;
+        const userType = req.user.usertype;
+        const updateData = { status: 'completed' };
+        const updatedTask = await updateTaskService(taskId, updateData, userId, userType);
+        return res.status(200).json({
+            success: true,
+            message: "Task approved and marked as completed",
+            data: updatedTask
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+// Admin rejects task
+export const adminRejectTaskController = async function (req, res) {
+    try {
+        const taskId = req.params.taskId;
+        const userId = req.user._id;
+        const userType = req.user.usertype;
+        const { rejectionReason } = req.body;
+        const updateData = { status: 'rejected', rejectionReason };
+        const updatedTask = await updateTaskService(taskId, updateData, userId, userType);
+        return res.status(200).json({
+            success: true,
+            message: "Task review rejected",
+            data: updatedTask
+        });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
     }
 };

@@ -18,6 +18,9 @@ export const API_ENDPOINTS = {
     UPDATE_USER_TASK_STATUS: (taskId) => `${BACKEND_URL}/api/v1/task/user-status/${taskId}`,
     DELETE_TASK: (taskId) => `${BACKEND_URL}/api/v1/task/delete/${taskId}`,
     GET_USER_SPECIFIC_TASKS: (userId) => `${BACKEND_URL}/api/v1/task/user/${userId}`,
+    REQUEST_REVIEW: (taskId) => `${BACKEND_URL}/api/v1/task/request-review/${taskId}`,
+    APPROVE_TASK: (taskId) => `${BACKEND_URL}/api/v1/task/approve/${taskId}`,
+    REJECT_TASK: (taskId) => `${BACKEND_URL}/api/v1/task/reject/${taskId}`,
 
     // Admin endpoints
     ADMIN_SIGNUP: `${BACKEND_URL}/api/v1/users/signup/admin`,

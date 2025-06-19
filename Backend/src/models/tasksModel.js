@@ -10,7 +10,7 @@ const taskSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["pending", "in-progress", "completed"],
+        enum: ["pending", "in-progress", "review-requested", "completed", "rejected"],
         default: "pending"
     },
     assignedBy: {
@@ -42,6 +42,10 @@ const taskSchema = new mongoose.Schema({
     lastUpdateTimestamp: {
         type: Date,
         default: Date.now
+    },
+    rejectionReason: {
+        type: String,
+        default: null
     }
 }, { timestamps: true });
 
