@@ -4,7 +4,7 @@ dotenv.config();
 
 export const PORT = process.env.PORT ;
 
-export const DEV_DB_URL = process.env.DEV_DB_URL;
+export const DEV_DB_URL = process.env.MONGODB_URI;
 
 export const JWT_SECRET = process.env.JWT_SECRET;
 

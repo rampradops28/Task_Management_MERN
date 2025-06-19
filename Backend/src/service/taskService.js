@@ -22,9 +22,9 @@ export const createTaskService = async function (taskData) {
     }
 };
 
-export const updateTaskService = async function (taskId, updateData, userId) {
+export const updateTaskService = async function (taskId, updateData, userId, userType) {
     try {
-        console.log('updateTaskService called with:', { taskId, updateData, userId });
+        console.log('updateTaskService called with:', { taskId, updateData, userId, userType });
 
         const task = await taskRepository.getTaskById(taskId);
         if (!task) {
@@ -32,51 +32,61 @@ export const updateTaskService = async function (taskId, updateData, userId) {
             throw new Error("Task Not Found");
         }
 
-        // Validate the status value
-        const validStatuses = ["pending", "in-progress", "completed"];
+        // New valid statuses
+        const validStatuses = ["pending", "in-progress", "review-requested", "completed", "rejected"];
         if (!validStatuses.includes(updateData.status)) {
             console.log('Invalid status value:', updateData.status);
             throw new Error("Invalid status value");
         }
 
-        // Validate status transition
         const currentStatus = task.status;
         const newStatus = updateData.status;
-        
-        const validTransitions = {
-            'pending': ['in-progress'],
-            'in-progress': ['completed'],
-            'completed': []
-        };
 
-        if (!validTransitions[currentStatus].includes(newStatus)) {
-            console.log('Invalid status transition:', { from: currentStatus, to: newStatus });
-            throw new Error(`Cannot change status from ${currentStatus} to ${newStatus}`);
-        }
-
-        try {
-            const updatedTask = await taskRepository.update(
-                taskId,
-                { status: updateData.status },
-                userId,
-                updateData.version
-            );
-            console.log('Task updated successfully in service:', updatedTask);
-            return updatedTask;
-        } catch (error) {
-            if (error.message === "CONCURRENT_UPDATE") {
-                // Get the latest task state for the error message
-                const latestTask = await taskRepository.getTaskById(taskId);
-                throw {
-                    code: "CONCURRENT_UPDATE",
-                    message: "Task was updated by another user",
-                    currentStatus: latestTask.status,
-                    lastUpdatedBy: latestTask.lastUpdatedBy,
-                    lastUpdateTimestamp: latestTask.lastUpdateTimestamp
-                };
+        // User can start a task or request review
+        if (userType === 'user') {
+            if (currentStatus === 'pending' && newStatus === 'in-progress') {
+                return await taskRepository.update(
+                    taskId,
+                    { status: 'in-progress' },
+                    userId
+                );
             }
-            throw error;
+            if (currentStatus === 'in-progress' && newStatus === 'review-requested') {
+                return await taskRepository.update(
+                    taskId,
+                    { status: 'review-requested' },
+                    userId
+                );
+            }
+            throw new Error("Invalid status transition");
         }
+
+        // Admin can approve or reject
+        if (userType === 'admin') {
+            if (currentStatus === 'review-requested' && newStatus === 'completed') {
+                // Approve
+                    return await taskRepository.update(
+                        taskId,
+                        { status: 'completed', rejectionReason: null },
+                        userId
+                    );
+            } else if (currentStatus === 'review-requested' && newStatus === 'rejected') {
+                // Reject, must provide rejectionReason
+                if (!updateData.rejectionReason) {
+                    throw new Error("Rejection reason required");
+                }
+                return await taskRepository.update(
+                    taskId,
+                    { status: 'rejected', rejectionReason: updateData.rejectionReason },
+                    userId
+                );
+            } else {
+                throw new Error("Admins can only approve or reject tasks in 'review-requested' status");
+            }
+        }
+
+        // Default: allow other transitions for admin (optional, or restrict as above)
+        throw new Error("Invalid status transition");
     } catch (error) {
         console.log("Update Task service error:", error);
         throw error;
