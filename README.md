@@ -1,168 +1,86 @@
 # ✅ Task Management System (RBAC-Based)
 
-This is a **Role-Based Task Management System** developed during my 3-month internship. The system provides separate dashboards and functionalities for **Admin** and **User** roles, enabling effective task assignment, tracking, and management within an organization.
+A simple, secure Task Management System built with the MERN stack during my internship. It features role-based dashboards for Admins and Users, making it easy to assign, track, and review tasks in a team.
 
-## 🚀 Features
+---
 
-### 🔐 Role-Based Access (RBAC)
-- **Admin**:
-  - Full access to all tasks
-  - Assign tasks to users
-  - Edit/delete assigned tasks
-  - View overall dashboard analytics
-  - Reset password from profile page
-  - Manage user accounts
-  - Generate task reports
-  - View task statistics
+## 🚀 Key Features
 
-- **User**:
-  - View personal tasks
-  - Task dashboard with status and deadlines
-  - Task history (completed and pending)
-  - Access to tasks assigned by admin
-  - Update task status
-  - View personal performance metrics
-  - Profile management
+### 🔐 Role-Based Access
+- **Admin:**
+  - Assign, edit, and delete tasks for users
+  - Review submitted tasks (accept/reject with feedback)
+  - Dashboard with team and task analytics
+  - Reset password and manage profile
+
+- **User:**
+  - See personal tasks and their status
+  - Start tasks, mark as In Progress, and submit for review
+  - View admin feedback (accepted/rejected tasks)
+  - Track task history and personal performance
+  - Manage own profile and password
+
+---
+
+## 🔁 Task Workflow
+
+1. **Admin assigns task** → User sees it on dashboard
+2. **User starts task** → Status changes to "In Progress"
+3. **User submits for review** → Admin accepts or rejects with feedback
+4. **Rejected tasks** → User can rework and resubmit
+
+---
 
 ## 🧩 Tech Stack
 
-| Layer          | Technology Used                                    |
-|----------------|--------------------------------------------------|
-| Frontend       | React, Bootstrap, MDB React UI Kit, Chart.js      |
-| Backend        | Node.js, Express.js, RESTful API                  |
-| Database       | MongoDB                                           |
-| Authentication | JWT (JSON Web Tokens)                             |
-| State Management| React Context API                                |
-| Charts & Reports| Chart.js, jsPDF                           |
-| UI Components  | Material Design Bootstrap (MDB)                   |
-| Icons          | Font Awesome, Lucide React                        |
+| Layer             | Technology Used                                   |
+|-------------------|---------------------------------------------------|
+| Frontend          | React, Bootstrap, MDB React UI Kit, Chart.js      |
+| Backend           | Node.js, Express.js                               |
+| Database          | MongoDB                                           |
+| Authentication    | JWT (JSON Web Tokens)                             |
+| State Management  | React Context API                                 |
+| Reports/Exports   | Chart.js, jsPDF, XLSX                             |
+| UI Components     | Material Design Bootstrap (MDB), Font Awesome     |
 
-## 📚 Functionality Overview
+---
 
-### 👤 Admin Panel
-- **Dashboard**:
-  - Overview of all user tasks with status
-  - Task completion statistics
-  - User performance metrics
-  - Interactive charts and graphs
-  
-- **Manage Tasks**:
-  - `Assign Task`: Create and assign tasks to specific users
-  - `Assigned Tasks`: View/edit/delete created tasks
-  - Task priority management
-  - Deadline tracking
-  
-- **User Management**:
-  - View all users
-  - User activity monitoring
-  - Account management
-  
-- **Profile Page**:
-  - Change password securely
-  - Update admin information
+## 🏗️ How to Run
 
-### 👥 User Panel
-- **Task Dashboard**:
-  - View all assigned tasks with deadlines and statuses
-  - Task priority indicators
-  - Progress tracking
-  
-- **Task History**:
-  - View history of completed and pending tasks
-  - Filter tasks by status/date
-  - Task completion statistics
-  
-- **Profile Management**:
-  - Update personal information
-  - Change password
-  - View performance metrics
-
-## 📦 Installation & Setup
-
-### Prerequisites
-- Node.js (v14 or higher)
-- MongoDB (v4.4 or higher)
-- npm or yarn package manager
-
-### Setup Instructions
-
-1. **Clone the repository**
+1. **Clone the repo**
    ```bash
    git clone https://github.com/yourusername/task-management-system.git
    cd task-management-system
    ```
 
-2. **Backend Setup**
+2. **Backend setup**
    ```bash
    cd Backend
    npm install
-   
-   # Configure environment variables
-   # Create .env file with:
-   # PORT=5000
-   # MONGODB_URI=mongodb://localhost:27017/taskManagementDB
-   # JWT_SECRET=your_jwt_secret_key
-   
-   # Start the server
+   # Add your .env file (MongoDB URI, JWT secret, etc.)
    npm start
    ```
 
-3. **Frontend Setup**
+3. **Frontend setup**
    ```bash
    cd Frontend
    npm install
-   
-   # Start the development server
    npm run dev
    ```
 
-4. **Access the Application**
+4. **Open the app**
    - Frontend: http://localhost:5173
    - Backend: http://localhost:5000
- 
 
-## 🔒 Security Features
+---
 
-- JWT-based authentication
-- Password hashing using bcrypt
-- Protected API routes
-- Role-based access control
-- Secure password reset mechanism
+## 🎉 Why Use This?
 
-## 📊 Data Export Features
+- Clean, modern design
+- Easy for admins to manage tasks and feedback
+- Simple for users to track progress and get feedback
+- Secure role-based access
 
-- Export task reports to Excel
-- Generate PDF reports
-- Chart and graph downloads
-- Task history exports
+---
 
-## 🎨 UI/UX Features
-
-- Responsive design for all devices
-- Modern and clean interface
-- Interactive charts and graphs
-- Intuitive navigation
-- Loading states and animations 
-
-## 🔧 Additional Tools Used
-
-- **Development**:
-  - Vite (Frontend build tool)
-  - Nodemon (Backend development)
-  - ESLint (Code linting)
-  
-- **Libraries**:
-  - Axios (HTTP client)
-  - Chart.js (Data visualization)
-  - XLSX (Excel export)
-  - jsPDF (PDF generation)
-  - html2canvas (Screenshot capture)
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
- 
+Feel free to fork and adapt for your team!
