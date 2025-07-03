@@ -1,6 +1,6 @@
 # ✅ Task Management System (RBAC-Based)
 
-A simple, secure Task Management System built with the MERN stack during my internship. It features role-based dashboards for Admins and Users, making it easy to assign, track, and review tasks in a team.
+A simple, secure Task Management System built with the MERN stack. It features role-based dashboards for Admins and Users, making it easy to assign, track, and review tasks in a team.
 
 ---
 
